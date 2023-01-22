@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+
+  orders:
+    restart: always
+    build: 
+      context: .
+      dockerfile: ./apps/orders/Dockerfile
+      target: development
+    command: npm run start:dev orders
+    env_file:
+      - ./apps/orders/.env
+    depends_on:
+      - mongo-orders
+      - rabbitmq
+
+    ports:
+      - '3000:3000'
+
+  billing:
+    restart: always
+    build: 
+      context: .
+      dockerfile: ./apps/billing/Dockerfile
+      target: development
+    command: npm run start:dev billing
+    env_file:
+      - ./apps/billing/.env
+    depends_on:
+      - rabbitmq
+      - mongo-billing
+
+  auth:
+    restart: always
+    build: 
+      context: .
+      dockerfile: ./apps/auth/Dockerfile
+      target: development
+    command: npm run start:dev auth
+    env_file:
+      - ./apps/billing/.env
+    ports:
+      - '3001:3001'
+    depends_on:
+      - rabbitmq
+      - mongo-billing
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - 5672:5672
+      - 15672:15672
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mongo-orders:
+    image: mongo:3.6
+    container_name: mongo-orders
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-vol-orders:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: test
+
+  mongo-billing:
+    image: mongo:3.6
+    container_name: mongo-billing
+    restart: always
+    ports:
+      - 27018:27017
+    volumes:
+      - mongo-vol-billing:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: test
+
+  mongo-auth:
+    image: mongo:3.6
+    container_name: mongo-auth
+    restart: always
+    ports:
+      - 27019:27017
+    volumes:
+      - mongo-vol-auth:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: test
+
+
+volumes:
+  mongo-vol-orders:
+  mongo-vol-billing:
+  mongo-vol-auth:
